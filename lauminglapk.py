@@ -1,29 +1,40 @@
-import requests
-url = "https://api.telegram.org/bot661014557:AAFVFNDAqdiNEyv2gj-CwI7arxZN8DiTZ94/"
-def get_updates_json(request):  
-    response = requests.get(request + 'getUpdates')
-    return response.json()
-def last_update(data):  
-    results = data['result']
-    total_updates = len(results) - 1
-    return results[total_updates]
-	
-def get_chat_id(update):  
-    chat_id = update['message']['chat']['id']
-    return chat_id
-def send_mess(chat, text):  
-    params = {'chat_id': chat, 'text': text}
-    response = requests.post(url + 'sendMessage', data=params)
-    return response
-chat_id = get_chat_id(last_update(get_updates_json(url)))
-send_mess(chat_id, 'Your message goes here')
+from sklearn.externals import joblib
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer;
+import telepot
+from telepot.loop import MessageLoop
+import time
 
-def main():  
-    update_id = last_update(get_updates_json(url))['update_id']
+model = joblib.load("model.pkl")
+
+def prediction(content):
+    predictions = model.predict_proba([content])
+    predictions = str(predictions[0])
+    predictions = predictions.replace("["," ");
+    predictions = predictions.replace("]"," ");
+    neg, pos = predictions.split(" ")
+    pos = float(pos)
+    neg = float(neg)
+    if(pos >= neg):
+        result = "This is a positive review! "+"( "+"{0:.2f}".format(pos)+")";
+    else:
+        result = "This is a negative review! "+"( "+"{0:.2f}".format(pos)+")";
+    return result
+
+def handle(msg):
+
+    content_type, chat_type, chat_id = telepot.glance(msg);
+
+    if content_type == "text":
+        content = msg["text"];
+        predictResult = prediction(content);
+        bot.sendMessage(chat_id, predictResult);
+
+if __name__ == "__main__":
+    
+    bot = telepot.Bot("661014557:AAFVFNDAqdiNEyv2gj-CwI7arxZN8DiTZ94");
+    MessageLoop(bot, handle).run_as_thread();
+
     while True:
-        if update_id == last_update(get_updates_json(url))['update_id']:
-           send_mess(get_chat_id(last_update(get_updates_json(url))), 'test')
-           update_id += 1
-    sleep(1)
-if __name__ == '__main__':  
-    main()
+        time.sleep(10)
+
+
